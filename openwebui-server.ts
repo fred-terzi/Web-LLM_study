@@ -121,6 +121,7 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.end();
     } else {
       // Non-streaming response
+      const promptTokens = messages.reduce((acc, m) => acc + m.content.length / 4, 0);
       res.json({
         id: `chatcmpl-${Date.now()}`,
         object: 'chat.completion',
@@ -135,9 +136,9 @@ app.post('/v1/chat/completions', async (req, res) => {
           finish_reason: 'stop',
         }],
         usage: {
-          prompt_tokens: messages.reduce((acc, m) => acc + m.content.length / 4, 0),
+          prompt_tokens: promptTokens,
           completion_tokens: 30,
-          total_tokens: 30 + messages.reduce((acc, m) => acc + m.content.length / 4, 0),
+          total_tokens: 30 + promptTokens,
         },
       });
     }
