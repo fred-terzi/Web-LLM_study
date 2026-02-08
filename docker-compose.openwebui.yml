@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # OpenWebUI service
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: webllm-openwebui
+    ports:
+      - "3000:8080"
+    environment:
+      # Configure OpenWebUI to use our WebLLM backend
+      - OPENAI_API_BASE_URL=http://host.docker.internal:3001/v1
+      - OPENAI_API_KEY=not-needed
+      - ENABLE_SIGNUP=true
+      - WEBUI_AUTH=false
+      - DEFAULT_MODELS=SmolLM2-360M-Instruct-q4f32_1-MLC
+    volumes:
+      - openwebui-data:/app/backend/data
+    restart: unless-stopped
+    extra_hosts:
+      # Allow container to access host network for WebLLM bridge
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  openwebui-data:
+    driver: local
