@@ -90,7 +90,11 @@ function onProgress(report: InitProgressReport): void {
 
 async function handleLoadModel(): Promise<void> {
   const modelId = modelSelect.value;
-  if (!modelId) return;
+  console.log(`[main] handleLoadModel called, selected: "${modelId}"`);
+  if (!modelId) {
+    console.warn("[main] No model selected, aborting.");
+    return;
+  }
 
   loadBtn.disabled = true;
   loadBtn.textContent = "Loading...";
@@ -99,10 +103,10 @@ async function handleLoadModel(): Promise<void> {
 
   try {
     if (currentModelId && getEngine()) {
-      // Reload with new model
+      console.log(`[main] Reloading model: ${modelId}`);
       await reloadModel(modelId, onProgress);
     } else {
-      // First load
+      console.log(`[main] First load: ${modelId}`);
       await createEngine(modelId, onProgress);
     }
 
@@ -287,7 +291,35 @@ clearAllBtn.addEventListener("click", handleClearAll);
 
 // ── Init ────────────────────────────────────────────────────────────
 
+async function checkWebGPU(): Promise<void> {
+  const nav = navigator as any;
+  if (!nav.gpu) {
+    statusLine.textContent = "⚠ WebGPU not supported in this browser.";
+    statusLine.style.color = "#e94560";
+    loadBtn.disabled = true;
+    console.error("[main] navigator.gpu is undefined — WebGPU not available.");
+    return;
+  }
+  try {
+    const adapter = await nav.gpu.requestAdapter();
+    if (!adapter) {
+      statusLine.textContent = "⚠ No WebGPU adapter found (no compatible GPU).";
+      statusLine.style.color = "#e94560";
+      loadBtn.disabled = true;
+      console.error("[main] requestAdapter() returned null.");
+      return;
+    }
+    console.log("[main] WebGPU adapter found:", adapter.info ?? "(info unavailable)");
+    statusLine.textContent = "WebGPU ready. Select a model and click Load.";
+  } catch (err) {
+    statusLine.textContent = `⚠ WebGPU error: ${(err as Error).message}`;
+    statusLine.style.color = "#e94560";
+    console.error("[main] WebGPU check error:", err);
+  }
+}
+
 populateModels();
 sendBtn.disabled = true;
 chatInput.disabled = true;
+checkWebGPU();
 statusLine.textContent = "Select a model and click Load to begin.";

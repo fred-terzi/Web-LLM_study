@@ -57,18 +57,36 @@ export async function createEngine(
 ): Promise<WebWorkerMLCEngine> {
   // Reuse existing worker if we have one
   if (!_worker) {
+    console.log("[engine] Creating new Worker...");
     _worker = new Worker(new URL("./worker.ts", import.meta.url), {
       type: "module",
     });
+
+    // Surface any errors from the worker
+    _worker.onerror = (e) => {
+      console.error("[engine] Worker error:", e);
+    };
+    _worker.onmessageerror = (e) => {
+      console.error("[engine] Worker message error:", e);
+    };
   }
 
+  console.log(`[engine] Calling CreateWebWorkerMLCEngine with model: ${modelId}`);
+
+  const wrappedProgress: InitProgressCallback = (report) => {
+    console.log(`[engine] Progress: ${(report.progress * 100).toFixed(1)}% — ${report.text}`);
+    onProgress?.(report);
+  };
+
   const engine = await CreateWebWorkerMLCEngine(_worker, modelId, {
-    initProgressCallback: onProgress,
+    initProgressCallback: wrappedProgress,
     appConfig: {
       ...prebuiltAppConfig,
       useIndexedDBCache: true,
     },
   });
+
+  console.log("[engine] CreateWebWorkerMLCEngine resolved successfully.");
 
   _engine = engine;
   _currentModelId = modelId;
