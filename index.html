@@ -3,316 +3,161 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebLLM Engine Test</title>
-    <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        background: #1a1a2e;
-        color: #eee;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-
-      /* ── Sidebar ─────────────────────────────────────────────── */
-      .app-layout {
-        display: flex;
-        flex: 1;
-        overflow: hidden;
-      }
-
-      #sidebar {
-        width: 260px;
-        background: #111;
-        border-right: 1px solid #0f3460;
-        display: flex;
-        flex-direction: column;
-        flex-shrink: 0;
-      }
-
-      #sidebar-header {
-        padding: 10px;
-        display: flex;
-        gap: 6px;
-      }
-
-      #new-chat-btn {
-        flex: 1;
-        padding: 8px;
-        border-radius: 6px;
-        border: 1px solid #0f3460;
-        background: #16213e;
-        color: #eee;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 13px;
-      }
-
-      #new-chat-btn:hover {
-        background: #1a2a4e;
-      }
-
-      #clear-all-btn {
-        padding: 8px 10px;
-        border-radius: 6px;
-        border: 1px solid #500;
-        background: #311;
-        color: #e94560;
-        cursor: pointer;
-        font-size: 13px;
-      }
-
-      #conversation-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 4px 8px;
-      }
-
-      .conv-item {
-        padding: 10px 12px;
-        border-radius: 8px;
-        margin-bottom: 2px;
-        cursor: pointer;
-        font-size: 13px;
-        color: #bbb;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .conv-item:hover {
-        background: #16213e;
-      }
-
-      .conv-item.active {
-        background: #0f3460;
-        color: #fff;
-      }
-
-      .conv-item .conv-title {
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .conv-item .conv-delete {
-        display: none;
-        background: none;
-        border: none;
-        color: #e94560;
-        cursor: pointer;
-        font-size: 14px;
-        padding: 0 4px;
-      }
-
-      .conv-item:hover .conv-delete {
-        display: inline;
-      }
-
-      /* ── Main Area ───────────────────────────────────────────── */
-      .main-area {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      header {
-        padding: 12px 20px;
-        background: #16213e;
-        border-bottom: 1px solid #0f3460;
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-
-      header h1 {
-        font-size: 18px;
-        color: #e94560;
-        margin-right: auto;
-      }
-
-      select,
-      button,
-      textarea {
-        font-family: inherit;
-        font-size: 14px;
-      }
-
-      #model-select {
-        padding: 6px 10px;
-        border-radius: 6px;
-        border: 1px solid #0f3460;
-        background: #1a1a2e;
-        color: #eee;
-        max-width: 400px;
-      }
-
-      #load-btn {
-        padding: 6px 16px;
-        border-radius: 6px;
-        border: none;
-        background: #e94560;
-        color: white;
-        cursor: pointer;
-        font-weight: 600;
-      }
-
-      #load-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .progress-container {
-        width: 100%;
-        background: #0f3460;
-        border-radius: 4px;
-        height: 8px;
-        overflow: hidden;
-      }
-
-      #progress-bar {
-        height: 100%;
-        width: 0%;
-        background: #e94560;
-        transition: width 0.2s ease;
-      }
-
-      #progress-text {
-        font-size: 12px;
-        color: #aaa;
-        padding: 4px 20px 0;
-        min-height: 20px;
-      }
-
-      #chat-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .message {
-        padding: 10px 14px;
-        border-radius: 12px;
-        max-width: 80%;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-      }
-
-      .message.user {
-        align-self: flex-end;
-        background: #0f3460;
-        color: #eee;
-      }
-
-      .message.assistant {
-        align-self: flex-start;
-        background: #16213e;
-        color: #ddd;
-        border: 1px solid #0f3460;
-      }
-
-      .input-area {
-        padding: 12px 20px;
-        background: #16213e;
-        border-top: 1px solid #0f3460;
-        display: flex;
-        gap: 10px;
-      }
-
-      #chat-input {
-        flex: 1;
-        padding: 10px 14px;
-        border-radius: 8px;
-        border: 1px solid #0f3460;
-        background: #1a1a2e;
-        color: #eee;
-        resize: none;
-        min-height: 44px;
-        max-height: 120px;
-      }
-
-      #send-btn {
-        padding: 10px 20px;
-        border-radius: 8px;
-        border: none;
-        background: #e94560;
-        color: white;
-        cursor: pointer;
-        font-weight: 600;
-        align-self: flex-end;
-      }
-
-      #send-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      #status-line {
-        font-size: 12px;
-        color: #888;
-        padding: 6px 20px;
-        background: #111;
-        text-align: center;
-      }
-    </style>
+    <title>AnythingLLM — Private Browser AI</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
   </head>
   <body>
-    <header>
-      <h1>⚡ WebLLM Engine</h1>
-      <select id="model-select">
-        <option value="">-- Select a model --</option>
-      </select>
-      <button id="load-btn">Load Model</button>
-    </header>
 
-    <div style="padding: 8px 20px;">
-      <div class="progress-container">
-        <div id="progress-bar"></div>
+    <!-- ═══ Loading Overlay ═══════════════════════════════════════ -->
+    <div id="loading-overlay">
+      <div class="logo">🧠</div>
+      <h2>AnythingLLM</h2>
+      <div class="loading-subtitle">Loading your private AI model — runs 100% in the browser via WebGPU.</div>
+      <div class="progress-track">
+        <div class="progress-fill"></div>
       </div>
-      <div id="progress-text"></div>
+      <div class="progress-label">Initializing…</div>
     </div>
 
-    <div class="app-layout">
-      <!-- Sidebar -->
+    <!-- ═══ App Shell ═════════════════════════════════════════════ -->
+    <div id="app">
+
+      <!-- ─── Sidebar ──────────────────────────────────────────── -->
       <div id="sidebar">
-        <div id="sidebar-header">
-          <button id="new-chat-btn">+ New Chat</button>
-          <button id="clear-all-btn" title="Delete all conversations">🗑</button>
+        <div class="sidebar-top">
+          <div class="sidebar-brand">
+            <span class="brand-icon">🧠</span>
+            <span class="brand-text">AnythingLLM</span>
+          </div>
+          <button id="new-chat-btn">＋ New Chat</button>
         </div>
+
+        <div class="sidebar-search">
+          <input type="text" placeholder="Search conversations…" />
+        </div>
+
         <div id="conversation-list"></div>
+
+        <div class="sidebar-bottom">
+          <button id="settings-sidebar-btn" class="sidebar-bottom-btn">
+            ⚙️ <span>Settings</span>
+          </button>
+          <button id="clear-all-sidebar-btn" class="sidebar-bottom-btn danger">
+            🗑 <span>Clear All Data</span>
+          </button>
+        </div>
       </div>
 
-      <!-- Main chat area -->
-      <div class="main-area">
-        <div id="chat-messages"></div>
+      <!-- ─── Main Panel ──────────────────────────────────────── -->
+      <div id="main-panel">
 
-        <div class="input-area">
-          <textarea
-            id="chat-input"
-            placeholder="Type a message... (Enter to send, Shift+Enter for newline)"
-            rows="1"
-          ></textarea>
-          <button id="send-btn">Send</button>
+        <!-- Header Bar -->
+        <div id="header-bar">
+          <button id="toggle-sidebar-btn" title="Toggle sidebar">☰</button>
+          <div class="header-title">New Chat</div>
+          <div class="model-pill">
+            <span class="status-dot loading"></span>
+            <span class="model-name">Loading…</span>
+          </div>
+          <button id="settings-btn" title="Settings">⚙️</button>
         </div>
 
-        <div id="status-line">Select a model and click Load to begin.</div>
+        <!-- Chat Area -->
+        <div id="chat-area">
+          <div id="chat-messages"></div>
+
+          <div id="input-area">
+            <div class="input-wrapper">
+              <textarea
+                id="chat-input"
+                placeholder="Send a message… (Enter to send, Shift+Enter for newline)"
+                rows="1"
+                disabled
+              ></textarea>
+              <button id="send-btn" disabled title="Send message">↑</button>
+            </div>
+            <div class="input-hint">
+              AnythingLLM runs 100% locally in your browser. No data leaves your device.
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div id="status-bar">
+          <span class="status-left">Initializing…</span>
+          <span class="status-right"></span>
+        </div>
       </div>
     </div>
 
-    <script type="module" src="/src/main.ts"></script>
+    <!-- ═══ Settings Modal ════════════════════════════════════════ -->
+    <div id="settings-backdrop">
+      <div class="settings-panel">
+        <div class="settings-header">
+          <h3>⚙️ Settings</h3>
+          <button id="settings-close-btn" class="settings-close-btn">✕</button>
+        </div>
+        <div class="settings-body">
+
+          <!-- Model Selection -->
+          <div class="settings-section">
+            <h4>Model</h4>
+            <div class="settings-field">
+              <label for="settings-model-select">Active Model</label>
+              <select id="settings-model-select"></select>
+            </div>
+          </div>
+
+          <!-- Generation Settings -->
+          <div class="settings-section">
+            <h4>Generation</h4>
+            <div class="settings-field">
+              <label>Temperature</label>
+              <div class="range-row">
+                <input type="range" id="settings-temperature" min="0" max="2" step="0.1" value="0.7" />
+                <span class="range-value" id="settings-temp-value">0.7</span>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label>Max Tokens</label>
+              <div class="range-row">
+                <input type="range" id="settings-max-tokens" min="64" max="4096" step="64" value="1024" />
+                <span class="range-value" id="settings-max-tokens-value">1024</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Prompt -->
+          <div class="settings-section">
+            <h4>System Prompt</h4>
+            <div class="settings-field">
+              <textarea id="settings-system-prompt" placeholder="You are a helpful assistant.">You are a helpful assistant.</textarea>
+            </div>
+          </div>
+
+          <!-- Save -->
+          <button id="settings-save-btn" style="
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s;
+          ">Save & Apply</button>
+
+          <!-- Danger Zone -->
+          <div class="settings-danger-zone">
+            <h4>Danger Zone</h4>
+            <p>Delete all conversations and reset the application. Model cache will be preserved.</p>
+            <button id="settings-clear-all-btn" class="btn-danger">Clear All Data</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/app.ts"></script>
   </body>
 </html>

@@ -145,17 +145,15 @@ describe("Phase 1: HTML Test UI", () => {
     const htmlPath = path.resolve(__dirname, "../index.html");
     const content = fs.readFileSync(htmlPath, "utf-8");
 
-    // Required DOM elements
-    expect(content).toContain('id="model-select"');
-    expect(content).toContain('id="load-btn"');
-    expect(content).toContain('id="progress-bar"');
-    expect(content).toContain('id="progress-text"');
+    // Required DOM elements (AnythingLLM UI)
+    expect(content).toContain('id="loading-overlay"');
     expect(content).toContain('id="chat-messages"');
     expect(content).toContain('id="chat-input"');
     expect(content).toContain('id="send-btn"');
-    expect(content).toContain('id="status-line"');
+    expect(content).toContain('id="header-bar"');
+    expect(content).toContain('id="sidebar"');
 
-    // Should load main.ts
-    expect(content).toContain('src="/src/main.ts"');
+    // Should load app.ts
+    expect(content).toContain('src="/src/app.ts"');
   });
 });

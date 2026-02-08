@@ -528,19 +528,18 @@ describe("Phase 3: Source File Structure", () => {
 
     expect(content).toContain('id="sidebar"');
     expect(content).toContain('id="new-chat-btn"');
-    expect(content).toContain('id="clear-all-btn"');
     expect(content).toContain('id="conversation-list"');
-    expect(content).toContain("app-layout");
+    expect(content).toContain('id="settings-backdrop"');
   });
 
-  it("main.ts should use sendMessage and manage conversations", async () => {
+  it("app.ts should use fetch router and manage conversations", async () => {
     const fs = await import("fs");
     const path = await import("path");
-    const filePath = path.resolve(__dirname, "../src/main.ts");
+    const filePath = path.resolve(__dirname, "../src/app.ts");
     const content = fs.readFileSync(filePath, "utf-8");
 
-    expect(content).toContain("sendMessage");
-    expect(content).toContain("currentConversationId");
+    expect(content).toContain("installFetchRouter");
+    expect(content).toContain("handleSendMessage");
     expect(content).toContain("refreshConversationList");
     expect(content).toContain("handleSelectConversation");
     expect(content).toContain("handleDeleteConversation");
