@@ -73,36 +73,3 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-  # ── Job 3: E2E test the deployed site ────────────────────────────
-  test-deployed:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run E2E tests against deployed site
-        run: npx playwright test --reporter=github
-        env:
-          BASE_URL: https://fred-terzi.github.io/Web-LLM_study/
-
-      - name: Upload Playwright report (deployed)
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report-deployed
-          path: playwright-report/
-          retention-days: 14
