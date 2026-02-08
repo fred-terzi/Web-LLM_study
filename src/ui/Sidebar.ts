@@ -6,6 +6,7 @@ import type { ConversationRecord } from "../db";
 
 export class Sidebar {
   private el: HTMLElement;
+  private backdropEl: HTMLElement;
   private listEl: HTMLElement;
   private searchInput: HTMLInputElement;
   private conversations: ConversationRecord[] = [];
@@ -32,6 +33,7 @@ export class Sidebar {
     this.onOpenSettings = opts.onOpenSettings;
 
     this.el = document.getElementById("sidebar")!;
+    this.backdropEl = document.getElementById("sidebar-backdrop")!;
     this.listEl = document.getElementById("conversation-list")!;
     this.searchInput = this.el.querySelector(".sidebar-search input") as HTMLInputElement;
 
@@ -39,6 +41,11 @@ export class Sidebar {
     document.getElementById("new-chat-btn")!.addEventListener("click", this.onNewChat);
     document.getElementById("clear-all-sidebar-btn")!.addEventListener("click", this.onClearAll);
     document.getElementById("settings-sidebar-btn")!.addEventListener("click", this.onOpenSettings);
+
+    // Backdrop click closes sidebar (mobile)
+    this.backdropEl.addEventListener("click", () => {
+      this.collapse();
+    });
 
     // Search filter
     this.searchInput.addEventListener("input", () => {
@@ -49,14 +56,17 @@ export class Sidebar {
 
   toggle(): void {
     this.el.classList.toggle("collapsed");
+    this.backdropEl.classList.toggle("visible");
   }
 
   collapse(): void {
     this.el.classList.add("collapsed");
+    this.backdropEl.classList.remove("visible");
   }
 
   expand(): void {
     this.el.classList.remove("collapsed");
+    this.backdropEl.classList.add("visible");
   }
 
   get isCollapsed(): boolean {
