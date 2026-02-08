@@ -526,10 +526,10 @@ describe("Phase 3: Source File Structure", () => {
     const filePath = path.resolve(__dirname, "../index.html");
     const content = fs.readFileSync(filePath, "utf-8");
 
-    expect(content).toContain('id="sidebar"');
-    expect(content).toContain('id="new-chat-btn"');
-    expect(content).toContain('id="conversation-list"');
-    expect(content).toContain('id="settings-backdrop"');
+    // React-based UI - sidebar/conversations are rendered by React components
+    // Just check that the root element and React entry point exist
+    expect(content).toContain('id="root"');
+    expect(content).toContain('src="/src/main-react.tsx"');
   });
 
   it("app.ts should use fetch router and manage conversations", async () => {
