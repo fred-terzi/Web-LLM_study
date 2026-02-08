@@ -40,17 +40,6 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-      - name: Run E2E tests (local dev server)
-        run: npx playwright test --reporter=github
-
-      - name: Upload Playwright report (local)
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report-local
-          path: playwright-report/
-          retention-days: 14
-
       - name: Build for production
         run: npm run build
 
