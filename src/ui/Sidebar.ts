@@ -33,7 +33,11 @@ export class Sidebar {
     this.onOpenSettings = opts.onOpenSettings;
 
     this.el = document.getElementById("sidebar")!;
-    this.backdropEl = document.getElementById("sidebar-backdrop")!;
+    const backdropEl = document.getElementById("sidebar-backdrop");
+    if (!backdropEl) {
+      throw new Error("Sidebar backdrop element not found in DOM");
+    }
+    this.backdropEl = backdropEl;
     this.listEl = document.getElementById("conversation-list")!;
     this.searchInput = this.el.querySelector(".sidebar-search input") as HTMLInputElement;
 
@@ -57,16 +61,20 @@ export class Sidebar {
   toggle(): void {
     this.el.classList.toggle("collapsed");
     this.backdropEl.classList.toggle("visible");
+    const isExpanded = !this.el.classList.contains("collapsed");
+    this.el.setAttribute("aria-expanded", String(isExpanded));
   }
 
   collapse(): void {
     this.el.classList.add("collapsed");
     this.backdropEl.classList.remove("visible");
+    this.el.setAttribute("aria-expanded", "false");
   }
 
   expand(): void {
     this.el.classList.remove("collapsed");
     this.backdropEl.classList.add("visible");
+    this.el.setAttribute("aria-expanded", "true");
   }
 
   get isCollapsed(): boolean {
