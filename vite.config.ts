@@ -1,9 +1,11 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
+import react from "@vitejs/plugin-react";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  plugins: [react()],
   root: ".",
-  base: process.env.GITHUB_ACTIONS ? "/Web-LLM_study/" : "/",
+  base: mode === 'production' ? (process.env.BASE_PATH || "/Web-LLM_study/") : "/",
   build: {
     outDir: "dist",
     target: "esnext",
@@ -24,4 +26,4 @@ export default defineConfig({
       "Cross-Origin-Embedder-Policy": "credentialless",
     },
   },
-});
+}));

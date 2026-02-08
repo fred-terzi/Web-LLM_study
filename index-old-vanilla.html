@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AnythingLLM — Private Browser AI</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+  </head>
+  <body>
+
+    <!-- ═══ Loading Overlay ═══════════════════════════════════════ -->
+    <div id="loading-overlay">
+      <div class="logo">🧠</div>
+      <h2>AnythingLLM</h2>
+      <div class="loading-subtitle">Loading your private AI model — runs 100% in the browser via WebGPU.</div>
+      <div class="progress-track">
+        <div class="progress-fill"></div>
+      </div>
+      <div class="progress-label">Initializing…</div>
+    </div>
+
+    <!-- ═══ App Shell ═════════════════════════════════════════════ -->
+    <div id="app">
+
+      <!-- ─── Sidebar Backdrop (mobile) ────────────────────────── -->
+      <div id="sidebar-backdrop"></div>
+
+      <!-- ─── Sidebar ──────────────────────────────────────────── -->
+      <div id="sidebar" class="collapsed" aria-expanded="false">
+        <div class="sidebar-top">
+          <div class="sidebar-brand">
+            <span class="brand-icon">🧠</span>
+            <span class="brand-text">AnythingLLM</span>
+          </div>
+          <button id="new-chat-btn">＋ New Chat</button>
+        </div>
+
+        <div class="sidebar-search">
+          <input type="text" placeholder="Search conversations…" />
+        </div>
+
+        <div id="conversation-list"></div>
+
+        <div class="sidebar-bottom">
+          <button id="settings-sidebar-btn" class="sidebar-bottom-btn">
+            ⚙️ <span>Settings</span>
+          </button>
+          <button id="clear-all-sidebar-btn" class="sidebar-bottom-btn danger">
+            🗑 <span>Clear All Data</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── Main Panel ──────────────────────────────────────── -->
+      <div id="main-panel">
+
+        <!-- Header Bar -->
+        <div id="header-bar">
+          <button id="toggle-sidebar-btn" title="Toggle sidebar">☰</button>
+          <div class="header-title">New Chat</div>
+          <div class="model-pill">
+            <span class="status-dot loading"></span>
+            <span class="model-name">Loading…</span>
+          </div>
+          <button id="settings-btn" title="Settings">⚙️</button>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chat-area">
+          <div id="chat-messages"></div>
+
+          <div id="input-area">
+            <div class="input-wrapper">
+              <textarea
+                id="chat-input"
+                placeholder="Send a message… (Enter to send, Shift+Enter for newline)"
+                rows="1"
+                disabled
+              ></textarea>
+              <button id="send-btn" disabled title="Send message">↑</button>
+            </div>
+            <div class="input-hint">
+              AnythingLLM runs 100% locally in your browser. No data leaves your device.
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div id="status-bar">
+          <span class="status-left">Initializing…</span>
+          <span class="status-right"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Settings Modal ════════════════════════════════════════ -->
+    <div id="settings-backdrop">
+      <div class="settings-panel">
+        <div class="settings-header">
+          <h3>⚙️ Settings</h3>
+          <button id="settings-close-btn" class="settings-close-btn">✕</button>
+        </div>
+        <div class="settings-body">
+
+          <!-- Model Selection -->
+          <div class="settings-section">
+            <h4>Model</h4>
+            <div class="settings-field">
+              <label for="settings-model-select">Active Model</label>
+              <select id="settings-model-select"></select>
+            </div>
+          </div>
+
+          <!-- Generation Settings -->
+          <div class="settings-section">
+            <h4>Generation</h4>
+            <div class="settings-field">
+              <label>Temperature</label>
+              <div class="range-row">
+                <input type="range" id="settings-temperature" min="0" max="2" step="0.1" value="0.7" />
+                <span class="range-value" id="settings-temp-value">0.7</span>
+              </div>
+            </div>
+            <div class="settings-field">
+              <label>Max Tokens</label>
+              <div class="range-row">
+                <input type="range" id="settings-max-tokens" min="64" max="4096" step="64" value="1024" />
+                <span class="range-value" id="settings-max-tokens-value">1024</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Prompt -->
+          <div class="settings-section">
+            <h4>System Prompt</h4>
+            <div class="settings-field">
+              <textarea id="settings-system-prompt" placeholder="You are a helpful assistant.">You are a helpful assistant.</textarea>
+            </div>
+          </div>
+
+          <!-- Save -->
+          <button id="settings-save-btn" style="
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.2s;
+          ">Save & Apply</button>
+
+          <!-- Danger Zone -->
+          <div class="settings-danger-zone">
+            <h4>Danger Zone</h4>
+            <p>Delete all conversations and reset the application. Model cache will be preserved.</p>
+            <button id="settings-clear-all-btn" class="btn-danger">Clear All Data</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>
