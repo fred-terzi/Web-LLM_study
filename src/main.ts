@@ -1,14 +1,16 @@
 /**
  * Test UI bootstrap.
- * Model selector, progress bar, and chat interface.
+ * Model selector, progress bar, conversation sidebar, and chat interface.
  */
 import {
   createEngine,
   getAvailableModels,
   reloadModel,
   getEngine,
+  getDB,
+  sendMessage,
   type InitProgressReport,
-  type ChatCompletionChunk,
+  type ConversationRecord,
 } from "./engine";
 
 // ── DOM References ──────────────────────────────────────────────────
@@ -25,8 +27,14 @@ const chatMessages = document.getElementById(
 const chatInput = document.getElementById("chat-input") as HTMLTextAreaElement;
 const sendBtn = document.getElementById("send-btn") as HTMLButtonElement;
 const statusLine = document.getElementById("status-line") as HTMLDivElement;
+const newChatBtn = document.getElementById("new-chat-btn") as HTMLButtonElement;
+const clearAllBtn = document.getElementById("clear-all-btn") as HTMLButtonElement;
+const conversationList = document.getElementById(
+  "conversation-list"
+) as HTMLDivElement;
 
 let currentModelId: string | null = null;
+let currentConversationId: string | null = null;
 let isGenerating = false;
 
 // ── Populate Model Selector ─────────────────────────────────────────
@@ -102,6 +110,9 @@ async function handleLoadModel(): Promise<void> {
     statusLine.textContent = `Model loaded: ${modelId}`;
     sendBtn.disabled = false;
     chatInput.disabled = false;
+
+    // Load conversation list after engine is ready
+    await refreshConversationList();
   } catch (err) {
     statusLine.textContent = `Error: ${(err as Error).message}`;
     console.error("Model load error:", err);
@@ -109,6 +120,91 @@ async function handleLoadModel(): Promise<void> {
     loadBtn.disabled = false;
     loadBtn.textContent = "Load Model";
   }
+}
+
+// ── Conversation Sidebar ────────────────────────────────────────────
+
+async function refreshConversationList(): Promise<void> {
+  try {
+    const db = await getDB();
+    const conversations = await db.listConversations();
+    renderConversationList(conversations);
+  } catch (err) {
+    console.error("Failed to load conversations:", err);
+  }
+}
+
+function renderConversationList(conversations: ConversationRecord[]): void {
+  conversationList.innerHTML = "";
+
+  for (const conv of conversations) {
+    const item = document.createElement("div");
+    item.className = `conv-item${conv.id === currentConversationId ? " active" : ""}`;
+    item.dataset.id = conv.id;
+
+    const title = document.createElement("span");
+    title.className = "conv-title";
+    title.textContent = conv.title;
+    item.appendChild(title);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "conv-delete";
+    deleteBtn.textContent = "✕";
+    deleteBtn.title = "Delete conversation";
+    deleteBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await handleDeleteConversation(conv.id);
+    });
+    item.appendChild(deleteBtn);
+
+    item.addEventListener("click", () => handleSelectConversation(conv.id));
+    conversationList.appendChild(item);
+  }
+}
+
+async function handleSelectConversation(id: string): Promise<void> {
+  currentConversationId = id;
+
+  // Refresh sidebar to update active state
+  await refreshConversationList();
+
+  // Load messages
+  const db = await getDB();
+  const messages = await db.getMessages(id);
+
+  chatMessages.innerHTML = "";
+  for (const msg of messages) {
+    if (msg.role === "user" || msg.role === "assistant") {
+      appendMessage(msg.role, msg.content);
+    }
+  }
+}
+
+async function handleDeleteConversation(id: string): Promise<void> {
+  const db = await getDB();
+  await db.deleteConversation(id);
+
+  if (currentConversationId === id) {
+    currentConversationId = null;
+    chatMessages.innerHTML = "";
+  }
+
+  await refreshConversationList();
+}
+
+async function handleNewChat(): Promise<void> {
+  currentConversationId = null;
+  chatMessages.innerHTML = "";
+  await refreshConversationList();
+}
+
+async function handleClearAll(): Promise<void> {
+  if (!confirm("Delete all conversations?")) return;
+  const db = await getDB();
+  await db.clearAll();
+  currentConversationId = null;
+  chatMessages.innerHTML = "";
+  await refreshConversationList();
 }
 
 // ── Chat ────────────────────────────────────────────────────────────
@@ -138,29 +234,20 @@ async function handleSend(): Promise<void> {
   const assistantBubble = appendMessage("assistant", "");
 
   try {
-    const messages: Array<{ role: string; content: string }> = [
-      { role: "system", content: "You are a helpful assistant." },
-    ];
-
-    // Gather existing messages from DOM for context
-    const domMessages = chatMessages.querySelectorAll(".message");
-    domMessages.forEach((el) => {
-      const role = el.classList.contains("user") ? "user" : "assistant";
-      const content = el.textContent ?? "";
-      if (content) {
-        messages.push({ role, content });
+    const { conversationId, stream } = await sendMessage(
+      userText,
+      currentConversationId,
+      {
+        systemPrompt: "You are a helpful assistant.",
+        maxTokens: 512,
       }
-    });
+    );
 
-    const chunks = await engine.chat.completions.create({
-      messages: messages as any,
-      stream: true,
-      stream_options: { include_usage: true },
-      max_tokens: 512,
-    });
+    // Update current conversation id (may have been created)
+    currentConversationId = conversationId;
 
     let fullText = "";
-    for await (const chunk of chunks as AsyncIterable<ChatCompletionChunk>) {
+    for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content ?? "";
       fullText += delta;
       assistantBubble.textContent = fullText;
@@ -173,6 +260,9 @@ async function handleSend(): Promise<void> {
         statusLine.textContent = `${currentModelId} | ${chunk.usage.completion_tokens} tokens | ${tps.toFixed(1)} tok/s`;
       }
     }
+
+    // Refresh sidebar to show new/updated conversation
+    await refreshConversationList();
   } catch (err) {
     assistantBubble.textContent = `Error: ${(err as Error).message}`;
     console.error("Chat error:", err);
@@ -192,6 +282,8 @@ chatInput.addEventListener("keydown", (e) => {
     handleSend();
   }
 });
+newChatBtn.addEventListener("click", handleNewChat);
+clearAllBtn.addEventListener("click", handleClearAll);
 
 // ── Init ────────────────────────────────────────────────────────────
 
