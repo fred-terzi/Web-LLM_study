@@ -1,16 +1,40 @@
 # OpenWebUI Integration with WebLLM Engine
 
-This directory contains the integration between OpenWebUI and the WebLLM engine, allowing you to use OpenWebUI's modern chat interface with WebLLM's browser-based AI models.
+This integration allows you to use OpenWebUI's modern chat interface alongside the WebLLM engine running in your browser.
 
 ## Architecture
 
 ```
-┌─────────────┐     HTTP      ┌──────────────────┐     WebLLM      ┌─────────────┐
-│  OpenWebUI  │ ───────────>  │  Bridge Server   │ ─────────────>  │  Browser    │
-│  (Docker)   │               │  (Node.js/Vite)  │                 │  WebGPU     │
-└─────────────┘               └──────────────────┘                 └─────────────┘
-  Port 3000                        Port 3001                         In-Browser
+┌─────────────┐                                          
+│  OpenWebUI  │─────┐                                   
+│  (Docker)   │     │                                   
+└─────────────┘     │                                   
+  Port 3000         │  HTTP API Calls                   
+                    │  /v1/chat/completions            
+                    │                                   
+                    ↓                                   
+            ┌───────────────┐         WebLLM           
+            │ Bridge Server │  ←──  fetchRouter  ←──┐ 
+            │ (Express+Vite)│                        │ 
+            └───────────────┘                        │ 
+                Port 3001                            │ 
+                    │                                │ 
+                    │  Serves Frontend               │ 
+                    ↓                                │ 
+            ┌──────────────────┐                     │ 
+            │  Browser         │                     │ 
+            │  - WebLLM Engine │─────────────────────┘ 
+            │  - WebGPU        │   In-Browser Execution
+            │  - UI            │                     
+            └──────────────────┘                     
 ```
+
+## Key Points
+
+1. **WebLLM runs in the browser**: The AI engine requires WebGPU and runs entirely client-side
+2. **Bridge server**: Serves the WebLLM app and provides OpenAI-compatible API endpoints
+3. **OpenWebUI**: Modern UI that connects to the bridge server's API
+4. **Two interfaces**: You can use either the original WebLLM UI or OpenWebUI
 
 ## Components
 
@@ -20,15 +44,16 @@ This directory contains the integration between OpenWebUI and the WebLLM engine,
 - Connects to the bridge server via OpenAI-compatible API
 
 ### 2. Bridge Server (openwebui-server.ts)
-- Express.js server that provides OpenAI-compatible API endpoints
+- Express.js server with OpenAI-compatible API endpoints
 - Serves the WebLLM frontend application via Vite
-- Routes API calls from OpenWebUI to the WebLLM engine
 - Runs on port 3001
+- Handles CORS for OpenWebUI access
 
 ### 3. WebLLM Engine (Browser)
 - Runs entirely in the browser using WebGPU
+- Models are downloaded and cached in IndexedDB
 - No data leaves your device
-- Accessible via the Vite dev server
+- Requires WebGPU-compatible browser (Chrome 113+ or Edge 113+)
 
 ## Quick Start
 
@@ -60,12 +85,18 @@ npm run dev:openwebui
 
 ### Usage
 
-1. In OpenWebUI (http://localhost:3000):
-   - The interface will automatically connect to the WebLLM engine
-   - Select a model from the dropdown (e.g., SmolLM2-360M-Instruct-q4f32_1-MLC)
+1. **Access the WebLLM UI** (http://localhost:3001):
+   - This is where the WebLLM engine runs with WebGPU
+   - The first model load will download ~1-2 GB and take a few minutes
+   - Once loaded, the model runs entirely in your browser
+   
+2. **Access OpenWebUI** (http://localhost:3000):
+   - Modern chat interface
+   - Select "SmolLM2-360M-Instruct-q4f32_1-MLC" or another WebLLM model
    - Start chatting!
+   - Note: Responses indicate you need the WebLLM UI open for full functionality
 
-2. The first time you use a model, it will download and cache in your browser (1-2 GB)
+**Important**: Currently, OpenWebUI receives demo responses. For full integration with live WebLLM models, the architecture would need additional components (WebSocket bridge or service worker) to connect the browser-based engine with OpenWebUI's API calls.
 
 ### Stopping
 

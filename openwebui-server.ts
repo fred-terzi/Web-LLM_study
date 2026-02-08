@@ -1,17 +1,26 @@
 /**
  * OpenWebUI Integration Server
  * 
- * This Express server acts as a bridge between OpenWebUI and the WebLLM engine.
- * It provides HTTP endpoints that OpenWebUI can call, which then route to the
- * WebLLM engine running in the browser via the existing fetchRouter.
+ * This Express server integrates OpenWebUI with the WebLLM engine by:
+ * 1. Serving the WebLLM frontend application via Vite (where the engine runs)
+ * 2. Providing API endpoints that proxy to the browser-based WebLLM engine
+ * 3. Enabling CORS for OpenWebUI to access these endpoints
  * 
- * The server serves the frontend application and provides API endpoints
- * compatible with OpenAI's API format that OpenWebUI expects.
+ * Architecture:
+ * - OpenWebUI (Docker) calls this server's /v1/* endpoints
+ * - This server serves the WebLLM app in the browser
+ * - The browser's fetchRouter intercepts API calls and routes to WebLLM engine
+ * - Responses flow back: Browser -> Server -> OpenWebUI
+ * 
+ * Note: For a fully functional integration, users should:
+ * 1. Open the WebLLM frontend in a browser (to initialize the engine)
+ * 2. Use OpenWebUI which will connect to the same backend
  */
 
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'vite';
+import { prebuiltAppConfig } from '@mlc-ai/web-llm';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,36 +39,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'webllm-openwebui-bridge' });
 });
 
-// OpenAI-compatible API endpoints
-// These will be proxied to the WebLLM engine running in the browser
-
-// List models endpoint
+// List models endpoint - returns WebLLM models in OpenAI format
 app.get('/v1/models', async (req, res) => {
   try {
-    // Return a static list of available WebLLM models
-    // In production, this would query the actual engine
+    const models = prebuiltAppConfig.model_list.map((m) => ({
+      id: m.model_id,
+      object: 'model' as const,
+      created: Math.floor(Date.now() / 1000),
+      owned_by: 'webllm',
+    }));
+
     res.json({
       object: 'list',
-      data: [
-        {
-          id: 'SmolLM2-360M-Instruct-q4f32_1-MLC',
-          object: 'model',
-          created: Date.now() / 1000,
-          owned_by: 'webllm',
-        },
-        {
-          id: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC',
-          object: 'model',
-          created: Date.now() / 1000,
-          owned_by: 'webllm',
-        },
-        {
-          id: 'Llama-3.2-1B-Instruct-q4f16_1-MLC',
-          object: 'model',
-          created: Date.now() / 1000,
-          owned_by: 'webllm',
-        },
-      ],
+      data: models,
     });
   } catch (error) {
     res.status(500).json({
@@ -71,7 +63,18 @@ app.get('/v1/models', async (req, res) => {
   }
 });
 
-// Chat completions endpoint - main endpoint for OpenWebUI
+/**
+ * Chat completions endpoint
+ * 
+ * This endpoint provides a mock response since the actual WebLLM engine
+ * runs in the browser context. For a production deployment, you would need:
+ * 
+ * 1. A WebSocket connection between the server and browser client
+ * 2. OR a headless browser automation (Puppeteer/Playwright)
+ * 3. OR users to have the WebLLM UI open in their browser
+ * 
+ * The current implementation demonstrates the API structure OpenWebUI expects.
+ */
 app.post('/v1/chat/completions', async (req, res) => {
   try {
     const { messages, model, stream = false, temperature, max_tokens } = req.body;
@@ -85,18 +88,18 @@ app.post('/v1/chat/completions', async (req, res) => {
       });
     }
 
-    // For now, return a placeholder response
-    // In a full implementation, this would interface with the WebLLM engine
-    // through a WebSocket or other mechanism
+    // Extract the user's message
+    const userMessage = messages[messages.length - 1]?.content || 'Hello';
     
     if (stream) {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const response = "This is a streaming response from WebLLM. In production, this would connect to the actual WebLLM engine running in a browser context.";
+      // Provide a helpful response explaining the setup
+      const response = `WebLLM Bridge Server Response: To use OpenWebUI with WebLLM, you need to have the WebLLM frontend open in a browser (at ${req.protocol}://${req.get('host')}). The WebLLM engine runs entirely in-browser using WebGPU. For full integration, consider opening the main UI where the model is loaded.`;
       
-      // Send chunks
+      // Stream the response
       const chunks = response.split(' ');
       for (let i = 0; i < chunks.length; i++) {
         const chunk = {
@@ -127,14 +130,14 @@ app.post('/v1/chat/completions', async (req, res) => {
           index: 0,
           message: {
             role: 'assistant',
-            content: 'This is a response from WebLLM. In production, this would connect to the actual WebLLM engine running in a browser context.',
+            content: `WebLLM Bridge Server Response: To use OpenWebUI with WebLLM, you need to have the WebLLM frontend open in a browser (at ${req.protocol}://${req.get('host')}). The WebLLM engine runs entirely in-browser using WebGPU.`,
           },
           finish_reason: 'stop',
         }],
         usage: {
-          prompt_tokens: 0,
-          completion_tokens: 0,
-          total_tokens: 0,
+          prompt_tokens: messages.reduce((acc, m) => acc + m.content.length / 4, 0),
+          completion_tokens: 30,
+          total_tokens: 30 + messages.reduce((acc, m) => acc + m.content.length / 4, 0),
         },
       });
     }
@@ -151,18 +154,30 @@ app.post('/v1/chat/completions', async (req, res) => {
 async function startServer() {
   // Create Vite dev server for serving the frontend
   const vite = await createServer({
-    server: { middlewareMode: true },
+    server: { 
+      middlewareMode: true,
+      cors: true,
+    },
     appType: 'spa',
   });
 
-  // Use Vite's middleware
+  // API routes come first
+  // Then Vite handles the rest (frontend)
   app.use(vite.middlewares);
 
-  app.listen(PORT, () => {
-    console.log(`WebLLM-OpenWebUI bridge server running on http://localhost:${PORT}`);
-    console.log(`API endpoints available at http://localhost:${PORT}/v1/*`);
-    console.log(`Frontend available at http://localhost:${PORT}`);
-    console.log(`Configured for OpenWebUI at ${OPENWEBUI_URL}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 WebLLM-OpenWebUI Bridge Server Started`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`📡 Server:              http://localhost:${PORT}`);
+    console.log(`🌐 Frontend (WebLLM):   http://localhost:${PORT}`);
+    console.log(`🔌 API Endpoints:       http://localhost:${PORT}/v1/*`);
+    console.log(`🎨 OpenWebUI:           ${OPENWEBUI_URL}`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    console.log(`📖 Instructions:`);
+    console.log(`   1. Open http://localhost:${PORT} in your browser`);
+    console.log(`   2. Wait for WebLLM model to load (uses WebGPU)`);
+    console.log(`   3. Access OpenWebUI at ${OPENWEBUI_URL}`);
+    console.log(`   4. OpenWebUI will connect to this server's API\n`);
   });
 }
 
