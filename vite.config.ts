@@ -3,6 +3,7 @@ import { resolve } from "path";
 
 export default defineConfig({
   root: ".",
+  base: process.env.GITHUB_ACTIONS ? "/Web-LLM_study/" : "/",
   build: {
     outDir: "dist",
     target: "esnext",
