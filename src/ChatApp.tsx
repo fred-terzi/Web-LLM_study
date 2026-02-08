@@ -14,8 +14,6 @@ import {
   Avatar,
   ConversationHeader,
   InfoButton,
-  VoiceCallButton,
-  VideoCallButton,
 } from '@chatscope/chat-ui-kit-react';
 import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
 import { createEngine, getEngine, getAvailableModels, getCurrentModelId } from './engine';
@@ -51,7 +49,13 @@ export function ChatApp() {
       setLoadingText('Checking WebGPU support...');
 
       // Check WebGPU
-      const nav = navigator as any;
+      interface NavigatorGPU extends Navigator {
+        gpu?: {
+          requestAdapter: () => Promise<unknown | null>;
+        };
+      }
+      
+      const nav = navigator as NavigatorGPU;
       if (!nav.gpu) {
         setLoadingText('⚠️ WebGPU not supported in this browser');
         return;
@@ -138,7 +142,7 @@ export function ChatApp() {
       };
       
       setMessages(prev => [...prev, assistantMessage]);
-      const assistantMsgIndex = messages.length + 1;
+      const assistantMsgIndex = messages.length; // Current length after user message
 
       let buffer = '';
       while (true) {

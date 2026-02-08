@@ -5,7 +5,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
   root: ".",
-  base: mode === 'production' ? "/Web-LLM_study/" : "/",
+  base: mode === 'production' ? (process.env.BASE_PATH || "/Web-LLM_study/") : "/",
   build: {
     outDir: "dist",
     target: "esnext",
